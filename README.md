@@ -125,12 +125,26 @@ arguments = map[string]Argument {
     category: "switch",
     value:    "",
   },
+  "version": {
+    info:     "Print version information",
+    short:    "V",
+    long:     "version",
+    category: "switch",
+    value:    "",
+  },
+  "V": {
+    info:     "Print version information",
+    short:    "V",
+    long:     "version",
+    category: "switch",
+    value:    "",
+  },
 }
 ```
 
 At the moment, both the short (e.g. -V) and the long version (e.g. --version) must be specified.
 
-Actions (arguments that take values/parameters) are specified with the category "action"
+Actions (arguments that take values/parameters) are specified with the category "switch"
 
 Options (arguments that don't take values/parameters) are specified with the category "option"
 
