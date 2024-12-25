@@ -146,7 +146,7 @@ verbose:  false
 Arguments
 ---------
 
-Arguments are handle in a map of structs, e.g.
+Arguments are handled in a map of structs, e.g.
 
 ```
 type Argument struct {
@@ -189,14 +189,14 @@ arguments = map[string]Argument {
   "printdefs": {
     info:     "Print Defaults",
     short:    "printdefs",
-    long:     "printdefaults",
+    long:     "",
     category: "action",
     value:    "",
   },
   "printenv": {
     info:     "Print Environment",
     short:    "printenv",
-    long:     "printenvironment",
+    long:     "",
     category: "action",
     value:    "",
   },
