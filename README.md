@@ -27,6 +27,9 @@ This is intended to provide a template for writing golang shell scripts.
 It gathers some arguably good and bad practices I've acquired over
 the years to handle command line arguments and inline documentation.
 
+This script is designed to have some more features than the standard flag
+module that I like, and less complexity of a non standard module such as cobra.
+
 This script utilises a special header (hashbang style) to be able to
 be able to run as a script so it can be called directly, rather than
 having to use "go run"
