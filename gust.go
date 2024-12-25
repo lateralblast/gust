@@ -2,7 +2,7 @@
 
 /*
 Name:         gust (Golang Universal Shell script Template)
-Version:      0.0.1
+Version:      0.1.3
 Release:      1
 License:      CC-BA (Creative Commons By Attribution)
               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -20,6 +20,8 @@ package main
 // Import modules
 
 import (
+  "os/exec"
+  "unicode"
   "runtime"
   "strings"
   "regexp"
@@ -31,10 +33,9 @@ import (
 // Create a structure to manage commandline arguments/switches
 
 type Argument struct {
-  name      string
-  long      string
-  short     string
   info      string
+  short     string
+  long      string
   category  string
   value     string
 }
@@ -52,7 +53,7 @@ var (
     "force":   false,
     "dryrun":  false,
   }
-  options = defaults
+  options = map[string]bool{}
   // Create a map of Argument structs to store commanline argument information
   // This should include both the short forms (e.g. -V) and long version (e.g. --version) 
   arguments = map[string]Argument {
@@ -67,6 +68,20 @@ var (
       info:     "Perform action",
       short:    "a",
       long:     "action",
+      category: "switch",
+      value:    "",
+    },
+    "option": {
+      info:     "Set option",
+      short:    "o",
+      long:     "option",
+      category: "switch",
+      value:    "",
+    },
+    "o": {
+      info:     "Set option",
+      short:    "o",
+      long:     "option",
       category: "switch",
       value:    "",
     },
@@ -126,8 +141,54 @@ var (
       category: "switch",
       value:    "",
     },
+    "printdefs": {
+      info:     "Print Defaults",
+      short:    "printdefs",
+      long:     "",
+      category: "action",
+      value:    "",
+    },
+    "printenv": {
+      info:     "Print Environment",
+      short:    "printenv",
+      long:     "",
+      category: "action",
+      value:    "",
+    },
+    "linter": {
+      info:     "Check script with linter",
+      short:    "linter",
+      long:     "",
+      category: "action",
+      value:    "",
+    },
   }
 )
+
+
+/*
+Funtion:      capitalize 
+Parameters:   sentence
+Description:  A routine to capitalize a sentence
+*/
+
+func capitalize(sentence string) string {
+  var output []rune    //create an output slice
+  isWord := true
+  for _, val := range sentence {
+    if isWord && unicode.IsLetter(val) {  //check if character is a letter convert the first character to upper case
+      output = append(output, unicode.ToUpper(val))
+      isWord = false
+    } else if !unicode.IsLetter(val) {
+      isWord = true
+      output = append(output, val)
+    } else {
+      output = append(output, val)
+    }
+  }
+  sentence = string(output)
+  return sentence
+}
 
 /*
 Funtion:      verbose_message
@@ -136,9 +197,9 @@ Description:  A routine to create consistently formatted output
 */
 
 func verbose_message(message, format string) {
-  var header = ""
+  var header string
   format = strings.ToLower(format)
-  format = strings.Title(format)
+  format = capitalize(format)
   matches, _ := regexp.MatchString("verbose", format)
   if matches {
     fmt.Println(message) 
@@ -197,6 +258,46 @@ func warning_message(message string) {
 }
 
 /*
+Funtion:      check_command
+Parameters:   command
+Description:  A routine to check that a shell command exists
+*/
+
+func check_command(command string) bool {
+  exists := false
+  shell  := exec.Command("command", "-v", command)
+  stdout, _ := shell.Output()
+  output := string(stdout)
+  matches, _ := regexp.MatchString(command, output)
+  if matches {
+    exists = true
+  } else {
+    exists = false
+  }
+  return exists
+}
+
+/*
+Funtion:      check_linter 
+Parameters:   script_file
+Description:  A routine to run linter over script
+*/
+
+func check_linter(script_file string) {
+  command := "golangci-lint"
+  exists  := check_command(command)
+  if exists {
+    fmt.Println("Linter output:")
+    shell := exec.Command(command, "run", script_file)
+    stdout, _ := shell.Output()
+    output := string(stdout)
+    fmt.Println(output)
+  } else {
+    warning_message("No linter found")
+  }
+}
+
+/*
 Funtion:      print_help_category
 Parameters:   category
 Description:  A routine to print help information for a specific category
@@ -209,17 +310,24 @@ func print_help_category(category string) {
     matches, _ := regexp.MatchString(category, argument.category)
     if matches {
       if len(key) > 1 {
-        if len(argument.long) < 15 {
-          fmt.Printf("%s, %s:\t\t%s\n", argument.long, argument.short, argument.info)
+        if len(argument.long) <1 {
+          if len(argument.short) < 7 {
+            fmt.Printf("%s:\t\t\t%s\n", argument.short, argument.info)
+          } else {
+            fmt.Printf("%s:\t\t%s\n", argument.short, argument.info)
+          }
         } else {
-          fmt.Printf("%s, %s:\t%s\n", argument.long, argument.short, argument.info)
+          if len(argument.long) < 15 {
+            fmt.Printf("%s, %s:\t\t%s\n", argument.long, argument.short, argument.info)
+          } else {
+            fmt.Printf("%s, %s:\t%s\n", argument.long, argument.short, argument.info)
+          }
         }
       }
     }
   }
   fmt.Println("")
 }
-
 
 /*
 Funtion:      print_help
@@ -233,9 +341,12 @@ func print_help(help_flags string) {
       print_help_category("option")
     case "switch", "switches":
       print_help_category("switch")
+    case "action", "actions":
+      print_help_category("action")
     case "all":
       print_help_category("switch")
       print_help_category("option")
+      print_help_category("action")
   }
   os.Exit(0)
 }
@@ -252,14 +363,14 @@ func print_version(script_file string) {
       fmt.Println(file_error)
   }
   defer open_file.Close()
+  regexp  := regexp.MustCompile("[0-9]")
   scanner := bufio.NewScanner(open_file)
   for scanner.Scan() {
     line := scanner.Text()
     if strings.Contains(line, "Version:") {
-      matches, _ := regexp.MatchString("[0-9]", line)
+      matches := regexp.MatchString(line)
       if matches {
-        fields := regexp.MustCompile("[^\\s]+").FindAllString(line, -1)
-        fmt.Println(fields[1])
+        fmt.Println(line)
       }
     }
   }
@@ -282,12 +393,13 @@ func handle_options(values string) {
   } else {
     parameters = append(parameters, values)
   }
+  regexp := regexp.MustCompile("^no")
   for number := 0 ;  number < len(parameters) ; number++ {
     parameter := parameters[number]
-    matches, _ := regexp.MatchString("^no", parameter)
+    matches   := regexp.MatchString(parameter)
     format := ""
     if matches {
-      format = "disable"
+      format    = "disable"
       parameter = strings.Split(parameter, "no")[1]
       options[parameter] = false
     } else {
@@ -296,7 +408,6 @@ func handle_options(values string) {
     }
     verbose_message(parameter, format)
   }
-  return
 }
 
 /*
@@ -336,9 +447,53 @@ func check_value(arg_num int) {
   }
 }
 
+/*
+Funtion:      print_environment
+Parameters:   none
+Description:  A routine to print environment variables (options)
+*/
+
+func print_environment() {
+  fmt.Println("Environment (Options):")
+  fmt.Println()
+  for key, value := range options {
+    def := defaults[key]
+    if len(key) < 7 {
+      fmt.Printf("%s:\t\t%t\t(default = %t)\n", key, value, def)
+    } else {
+      fmt.Printf("%s:\t%t\t(default = %t)\n", key, value, def)
+    }
+  }
+  fmt.Println()
+}
+
+/*
+Funtion:      print_defaults
+Parameters:   none
+Description:  A routine to print default environment variables (options)
+*/
+
+func print_defaults() {
+  fmt.Println("Defaults (Options):")
+  fmt.Println()
+  for key, value := range defaults {
+    if len(key) < 7 {
+      fmt.Printf("%s:\t\t%t\n", key, value)
+    } else {
+      fmt.Printf("%s:\t%t\n", key, value)
+    }
+  }
+  fmt.Println()
+}
+
+
 // Main function
 
 func main() {
+  // Copy defaults to options map
+  for key, value := range defaults {
+    options[key] = value
+  }
   // Create arrays to store actions or options
   action_flags := []string{}
   option_flags := []string{}
@@ -360,6 +515,10 @@ func main() {
     help_flags := "all"
     print_help(help_flags)
   }
+  regexp1 := regexp.MustCompile("^-[a-z,A-Z][a-z,Z]")
+  regexp2 := regexp.MustCompile("^-")
+  regexp3 := regexp.MustCompile("option")
+  regexp4 := regexp.MustCompile(",")
   // loop through command line arguments and handle them
   for arg_num := 1 ; arg_num < len(os.Args) ; arg_num++ {
     arg_name := os.Args[arg_num]
@@ -367,7 +526,7 @@ func main() {
     arg_name = strings.Replace(arg_name, "options", "option", -1)
     arg_name = strings.Replace(arg_name, "actions", "action", -1)
     // Check if we have a -abc style switch and process
-    matches, _ := regexp.MatchString("^-[a-z,A-Z][a-z,Z]", arg_name)
+    matches := regexp1.MatchString(arg_name)
     if matches {
       // Strip -
       arg_names := strings.Split(arg_name, "-")[1]
@@ -378,7 +537,7 @@ func main() {
         _, exists := arguments[letter]
         if (exists) {
           // Check that an argument structure exists and grab the long version
-          matches, _ := regexp.MatchString("option", arguments[letter].category)
+          matches := regexp3.MatchString(arguments[letter].category)
           if matches {
             long_name := arguments[letter].long
             handle_options(long_name)
@@ -391,54 +550,59 @@ func main() {
         }
       }
     } else {
-      // Strip -
-      arg_name = strings.Replace(arg_name, "-", "", -1)
-      // Check argument structure exists
-      _, exists := arguments[arg_name]
-      if exists {
-        // If argument structure exists check if it is an option and handle
-        matches, _ := regexp.MatchString("option", arguments[arg_name].category)
-        long_name := arguments[arg_name].long
-        if matches {
-          handle_options(long_name)
-        } else {
-          // If argument is not an option, handle appropriatle
-          switch long_name {
-            case "action":
-              check_value(arg_num)
-              action_flags = append(action_flags, os.Args[arg_num+1])
-              do_actions = true
-            case "option":
-              check_value(arg_num)
-              option_flags = append(option_flags, os.Args[arg_num+1])
-              do_options = true
-            case "version":
-              print_version(script_file)
-            case "help":
-              check_value(arg_num)
-            default:
-              print_help("all")
-          }
-        }
-      } else {
-        // check if argument is a negative option, e.g. noverbose and handle
-        matches, _ := regexp.MatchString("^no", arg_name)
-        if matches {
-          parameter := strings.Split(arg_name, "no")[1]
-          matches, _ := regexp.MatchString("option", arguments[parameter].category)
+      matches := regexp2.MatchString(arg_name)
+      if matches {
+        // Strip -
+        arg_name = strings.Replace(arg_name, "-", "", -1)
+        // Check argument structure exists
+        _, exists := arguments[arg_name]
+        if exists {
+          // If argument structure exists check if it is an option and handle
+          matches   := regexp3.MatchString(arguments[arg_name].category)
+          long_name := arguments[arg_name].long
           if matches {
-            handle_options(arg_name)
+            handle_options(long_name)
+          } else {
+            // If argument is not an option, handle appropriatle
+            switch long_name {
+              case "action":
+              check_value(arg_num)
+                action_flags = append(action_flags, os.Args[arg_num+1])
+                do_actions = true
+              case "option":
+              check_value(arg_num)
+                option_flags = append(option_flags, os.Args[arg_num+1])
+                do_options = true
+              case "version":
+                print_version(script_file)
+              case "help":
+                check_value(arg_num)
+              default:
+                print_help("all")
+            }
+          }
+        } else {
+          fmt.Println(arg_name)
+          os.Exit(0)
+          // check if argument is a negative option, e.g. noverbose and handle
+          matches, _ := regexp.MatchString("^no", arg_name)
+          if matches {
+            parameter  := strings.Split(arg_name, "no")[1]
+            matches, _ := regexp.MatchString("option", arguments[parameter].category)
+            if matches {
+              handle_options(arg_name)
+            } else {
+              // If argument structure does exist warn and print help
+              message := "Commandline argument "+arg_name+" does not exist"
+              warning_message(message)
+              print_help("all")
+            }
           } else {
             // If argument structure does exist warn and print help
             message := "Commandline argument "+arg_name+" does not exist"
             warning_message(message)
             print_help("all")
           }
-        } else {
-          // If argument structure does exist warn and print help
-          message := "Commandline argument "+arg_name+" does not exist"
-          warning_message(message)
-          print_help("all")
         }
       }
     }
@@ -453,17 +617,28 @@ func main() {
   // If we have action(s) handle each
   if do_actions {
     for number := 0 ; number < len(action_flags) ; number++ {
-      actions := []string{}
-      action := action_flags[number]
-      matches, _ := regexp.MatchString(",", action)
+      action_list := []string{}
+      action_name := action_flags[number]
+      matches     := regexp4.MatchString(action_name)
       if matches {
-        actions = strings.Split(action, ",")
+        action_list = strings.Split(action_name, ",")
       } else {
-        actions = append(actions, action)
+        action_list = append(action_list, action_name)
       }
-      for act_num := 0 ; act_num < len(actions) ; act_num++ {
-        message := "action flag " +actions[act_num]  
+      for act_num := 0 ; act_num < len(action_list) ; act_num++ {
+        parameter := action_list[act_num]
+        message   := "action flag " +parameter
         verbose_message(message, "process")
+        switch parameter {
+          case "help":
+            print_help("all")
+          case "printenv":
+            print_environment()
+          case "printdefs":
+            print_defaults()
+          case "linter":
+            check_linter(script_file)
+        }
       }
     }
   }

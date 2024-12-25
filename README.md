@@ -8,7 +8,13 @@ Golang Universal Shell script Template
 Version
 -------
 
-Version 0.0.1
+Version 0.1.3
+
+To get version:
+
+``
+./gust.go --version
+``
 
 Introduction
 ------------
@@ -60,6 +66,21 @@ This section details some of the choices taken in the template.
 - Use true/false as values rather than 0/1 as I often generate YAML and other config files that use these as values
 - Put environment variables and command line parameters into variables so that they are given more interpretable names
 - Only run inline information gathering (version, help, etc) when called to reduce start up time
+- Only use standard core modules
+
+Requirements
+------------
+
+Standard modules required:
+
+- os/exec
+- unicode
+- runtime
+- strings
+- regexp
+- bufio
+- fmt
+- os
 
 Workflow
 --------
@@ -95,6 +116,33 @@ or with the options commandline arguement (e.g. --option verbose)
 
 Options are stored in a map, which is initiated from the defaults map specified in previous section.
 
+Print options:
+
+```
+./gust.go --action printenv --options dryrun
+Environment (Options):
+
+dryrun:   true  (default = false)
+verbose:  false (default = false)
+force:    false (default = false)
+```
+
+Defaults
+--------
+
+As per previous section, defaults are stored in a map, and options inherits them at start.
+
+Print defaults:
+
+```
+./gust.go --action printdefs
+Defaults (Options):
+
+force:    false
+dryrun:   false
+verbose:  false
+```
+
 Arguments
 ---------
 
@@ -102,10 +150,9 @@ Arguments are handle in a map of structs, e.g.
 
 ```
 type Argument struct {
-  name      string
-  long      string
-  short     string
   info      string
+  short     string
+  long      string
   category  string
   value     string
 }
@@ -139,14 +186,31 @@ arguments = map[string]Argument {
     category: "switch",
     value:    "",
   },
+  "printdefs": {
+    info:     "Print Defaults",
+    short:    "printdefs",
+    long:     "printdefaults",
+    category: "action",
+    value:    "",
+  },
+  "printenv": {
+    info:     "Print Environment",
+    short:    "printenv",
+    long:     "printenvironment",
+    category: "action",
+    value:    "",
+  },
 }
 ```
 
 At the moment, both the short (e.g. -V) and the long version (e.g. --version) must be specified.
 
-Actions (arguments that take values/parameters) are specified with the category "switch"
+Switches (arguments that take values/parameters) are specified with the category "switch"
 
 Options (arguments that don't take values/parameters) are specified with the category "option"
+
+Actions (actions performed by switches) are specified with the category "action"
+
 
 Output
 ------
@@ -161,3 +225,54 @@ Check Values
 There is a check_values function that can be run with switches that take values.
 This is a simple check to see if the value, if it starts with a "--" then it assumes that you haven't provided
 a value and it's processing the next switch and exit. This can be overridden by using the --force switch.
+
+Help
+----
+
+Help information is provided by thee argument struct, so any new arguments added will be available to help.
+
+```
+./gust.go --help
+Usage (switch):
+
+option, o:    Set option
+action, a:    Perform action
+version, V:   Print version information
+help, h:    Print help information
+
+Usage (option):
+
+verbose, v:   Enable verbose output
+dryrun, d:    Enable dryrun mode
+
+Usage (action):
+
+printdefs:    Print Defaults
+linter:       Check script with linter
+printenv:     Print Environment
+```
+Linter
+------
+
+The script has an action to run the golang linter against itself if installed:
+
+```
+./gust.go --action linter
+```
+
+Examples
+--------
+
+Run linter and printdefs as two actions in one command using two action switches:
+
+```
+./gust.go --action linter --action printdefs
+```
+
+Run linter and printdefs as two actions in one command using one action switch:
+
+```
+./gust.go --action linter,printdefs
+```
+
+The same can be done for options

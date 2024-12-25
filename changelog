@@ -1,2 +1,26 @@
 # 0.0.1:
 # Initial working edition with some features and documentation
+# 0.0.2: Wed 25 Dec 2024 22:43:58 AEDT
+# Code cleanup and added printenv funstion
+# 0.0.3: Wed 25 Dec 2024 23:02:44 AEDT
+# Cleanup based on golangci-lint recommendations
+# 0.0.4: Wed 25 Dec 2024 23:07:26 AEDT
+# Updated documentation
+# 0.0.5: Wed 25 Dec 2024 23:08:13 AEDT
+# Fixed Version code
+# 0.0.6: Thu 26 Dec 2024 06:14:11 AEDT
+# Added routine to print defaults and updated code to print environment
+# 0.0.7: Thu 26 Dec 2024 06:33:47 AEDT
+# Fixed options map
+# 0.0.8: Thu 26 Dec 2024 08:12:54 AEDT
+# Added action category to arguments struct map
+# 0.0.9: Thu 26 Dec 2024 08:17:43 AEDT
+# Fixed regular expressions in loops as per linter recommendations
+# 0.1.0: Thu 26 Dec 2024 08:22:32 AEDT
+# Updated documentation
+# 0.1.1: Thu 26 Dec 2024 08:55:59 AEDT
+# Fixed tabulation of help output
+# 0.1.2: Thu 26 Dec 2024 09:37:23 AEDT
+# Added code to check OS command exists
+# 0.1.3: Thu 26 Dec 2024 09:39:31 AEDT
+# Updated documentation
