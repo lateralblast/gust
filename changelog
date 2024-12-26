@@ -24,3 +24,5 @@
 # Added code to check OS command exists
 # 0.1.3: Thu 26 Dec 2024 09:39:31 AEDT
 # Updated documentation
+# 0.1.4: Thu 26 Dec 2024 21:13:03 AEDT
+# Added code for dynamic functions

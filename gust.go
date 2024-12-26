@@ -2,7 +2,7 @@
 
 /*
 Name:         gust (Golang Universal Shell script Template)
-Version:      0.1.3
+Version:      0.1.4
 Release:      1
 License:      CC-BA (Creative Commons By Attribution)
               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -23,6 +23,7 @@ import (
   "os/exec"
   "unicode"
   "runtime"
+  "reflect"
   "strings"
   "regexp"
   "bufio"
@@ -38,11 +39,18 @@ type Argument struct {
   long      string
   category  string
   value     string
+  dynamic   bool
 }
+
+// Dynamic function struct
+
+type Dynamic struct{}
 
 // Initialize variables
 
 var (
+  // Get script file
+  _, script_file, _,  _ = runtime.Caller(0)
   // Create booleans for actions and options switches
   do_actions = false
   do_options = false
@@ -63,6 +71,7 @@ var (
       long:     "action",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "a": {
       info:     "Perform action",
@@ -70,6 +79,7 @@ var (
       long:     "action",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "option": {
       info:     "Set option",
@@ -77,6 +87,7 @@ var (
       long:     "option",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "o": {
       info:     "Set option",
@@ -84,6 +95,7 @@ var (
       long:     "option",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "dryrun": {
       info:     "Enable dryrun mode",
@@ -91,6 +103,7 @@ var (
       long:     "dryrun",
       category: "option",
       value:    "false",
+      dynamic:  false,
     },
     "d": {
       info:     "Enable dryrun mode",
@@ -98,6 +111,7 @@ var (
       long:     "dryrun",
       category: "option",
       value:    "false",
+      dynamic:  false,
     },
     "help": {
       info:     "Print help information",
@@ -105,6 +119,7 @@ var (
       long:     "help",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "h": {
       info:     "Print help information",
@@ -112,6 +127,7 @@ var (
       long:     "help",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "verbose": {
       info:     "Enable verbose output",
@@ -119,6 +135,7 @@ var (
       long:     "verbose",
       category: "option",
       value:    "false",
+      dynamic:  false,
     },
     "v": {
       info:     "Enable verbose output",
@@ -126,6 +143,7 @@ var (
       long:     "verbose",
       category: "option",
       value:    "false",
+      dynamic:  false,
     },
     "version": {
       info:     "Print version information",
@@ -133,6 +151,7 @@ var (
       long:     "version",
       category: "switch",
       value:    "",
+      dynamic:  true,
     },
     "V": {
       info:     "Print version information",
@@ -140,6 +159,7 @@ var (
       long:     "version",
       category: "switch",
       value:    "",
+      dynamic:  false,
     },
     "printdefs": {
       info:     "Print Defaults",
@@ -147,6 +167,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
+      dynamic:  false,
     },
     "printenv": {
       info:     "Print Environment",
@@ -154,6 +175,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
+      dynamic:  false,
     },
     "linter": {
       info:     "Check script with linter",
@@ -161,6 +183,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
+      dynamic:  false,
     },
   }
 )
@@ -283,7 +306,7 @@ Parameters:   script_file
 Description:  A routine to run linter over script
 */
 
-func check_linter(script_file string) {
+func check_linter() {
   command := "golangci-lint"
   exists  := check_command(command)
   if exists {
@@ -352,12 +375,12 @@ func print_help(help_flags string) {
 }
 
 /*
-Function:     print_version
+Function:     Version (dynamic)
 Parameters:   script_file
 Description:  A routine to print version information
 */
 
-func print_version(script_file string) {
+func (dynamic Dynamic) Version() {
   open_file, file_error := os.Open(script_file)
   if file_error != nil {
       fmt.Println(file_error)
@@ -508,8 +531,6 @@ func main() {
       options["verbose"] = true
     }
   }
-  // Get script file
-  _, script_file, _,  _ := runtime.Caller(0)
   // If we have no arguments print help information
   if len(os.Args) < 2 {
     help_flags := "all"
@@ -558,32 +579,39 @@ func main() {
         _, exists := arguments[arg_name]
         if exists {
           // If argument structure exists check if it is an option and handle
-          matches   := regexp3.MatchString(arguments[arg_name].category)
           long_name := arguments[arg_name].long
+          matches   := regexp3.MatchString(arguments[long_name].category)
           if matches {
             handle_options(long_name)
           } else {
-            // If argument is not an option, handle appropriatle
-            switch long_name {
-              case "action":
-              check_value(arg_num)
-                action_flags = append(action_flags, os.Args[arg_num+1])
-                do_actions = true
-              case "option":
-              check_value(arg_num)
-                option_flags = append(option_flags, os.Args[arg_num+1])
-                do_options = true
-              case "version":
-                print_version(script_file)
-              case "help":
-                check_value(arg_num)
-              default:
-                print_help("all")
+            dynamic := capitalize(long_name)
+            _, exists := arguments[long_name]
+            if exists {
+              check := arguments[long_name].dynamic
+              if check {
+                instance := Dynamic{}
+                method   := reflect.ValueOf(instance).MethodByName(dynamic)
+                method.Call(nil)
+              } else {
+                // If argument is not an option, handle appropriatly
+                switch long_name {
+                  case "action":
+                    check_value(arg_num)
+                    action_flags = append(action_flags, os.Args[arg_num+1])
+                    do_actions = true
+                  case "option":
+                    check_value(arg_num)
+                    option_flags = append(option_flags, os.Args[arg_num+1])
+                    do_options = true
+                  case "help":
+                    check_value(arg_num)
+                  default:
+                    print_help("all")
+                }
+              }
             }
           }
         } else {
-          fmt.Println(arg_name)
-          os.Exit(0)
           // check if argument is a negative option, e.g. noverbose and handle
           matches, _ := regexp.MatchString("^no", arg_name)
           if matches {
@@ -629,15 +657,28 @@ func main() {
         parameter := action_list[act_num]
         message   := "action flag " +parameter
         verbose_message(message, "process")
-        switch parameter {
-          case "help":
-            print_help("all")
-          case "printenv":
-            print_environment()
-          case "printdefs":
-            print_defaults()
-          case "linter":
-            check_linter(script_file)
+        dynamic := capitalize(parameter)
+        _, exists := arguments[parameter]
+        if exists {
+          check := arguments[parameter].dynamic
+          if check {
+            instance := Dynamic{}
+            method   := reflect.ValueOf(instance).MethodByName(dynamic)
+            method.Call(nil)
+          } else {
+            switch parameter {
+              case "help":
+                print_help("all")
+              case "printenv":
+                print_environment()
+              case "printdefs":
+                print_defaults()
+              case "linter":
+                check_linter()
+            }
+          }
+        } else {
+          print_help("all")
         }
       }
     }

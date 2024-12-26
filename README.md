@@ -8,7 +8,7 @@ Golang Universal Shell script Template
 Version
 -------
 
-Version 0.1.3
+Version 0.1.4
 
 To get version:
 
@@ -158,6 +158,7 @@ type Argument struct {
   long      string
   category  string
   value     string
+  dynamic   bool
 }
 
 arguments = map[string]Argument {
@@ -167,6 +168,7 @@ arguments = map[string]Argument {
     long:     "action",
     category: "switch",
     value:    "",
+    dynamic:  false,
   },
   "a": {
     info:     "Perform action",
@@ -174,6 +176,7 @@ arguments = map[string]Argument {
     long:     "action",
     category: "switch",
     value:    "",
+    dynamic:  false,
   },
   "version": {
     info:     "Print version information",
@@ -181,6 +184,7 @@ arguments = map[string]Argument {
     long:     "version",
     category: "switch",
     value:    "",
+    dynamic:  true,
   },
   "V": {
     info:     "Print version information",
@@ -188,6 +192,7 @@ arguments = map[string]Argument {
     long:     "version",
     category: "switch",
     value:    "",
+    dynamic:  false,
   },
   "printdefs": {
     info:     "Print Defaults",
@@ -195,6 +200,7 @@ arguments = map[string]Argument {
     long:     "",
     category: "action",
     value:    "",
+    dynamic:  false,
   },
   "printenv": {
     info:     "Print Environment",
@@ -202,6 +208,7 @@ arguments = map[string]Argument {
     long:     "",
     category: "action",
     value:    "",
+    dynamic:  false,
   },
 }
 ```
@@ -214,6 +221,48 @@ Options (arguments that don't take values/parameters) are specified with the cat
 
 Actions (actions performed by switches) are specified with the category "action"
 
+The info entry specifies the information that is given to the help routine.
+
+The dynamic entry specifies whether a dynamic function/routine is available (one that can be called via its argument name)
+
+Dynamic
+-------
+
+Dynamic routines/functions are ones that can be called via their action name, e.g. --version
+
+In the arguments mapped struct, a entry is need that has the dynamic boolean set to true:
+
+```
+arguments = map[string]Argument {
+  "version": {
+    info:     "Print version information",
+    short:    "V",
+    long:     "version",
+    category: "switch",
+    value:    "",
+    dynamic:  true,
+  },
+}
+```
+
+Then a function is required, e.g.:
+
+```
+func (dynamic Dynamic) Version() {
+  // Code here
+}
+
+```
+
+The function is then called as part of the commandline argument processing.
+
+An example of code to call the dynamic routine:
+
+```
+instance := Dynamic{}
+method   := reflect.ValueOf(instance).MethodByName("Verbose")
+method.Call(nil)
+```
 
 Output
 ------
