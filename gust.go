@@ -167,7 +167,7 @@ var (
 
 
 /*
-Funtion:      capitalize 
+Function:     capitalize 
 Parameters:   sentence
 Description:  A routine to capitalize a sentence
 */
@@ -191,7 +191,7 @@ func capitalize(sentence string) string {
 }
 
 /*
-Funtion:      verbose_message
+Function:     verbose_message
 Parameters:   message and formet
 Description:  A routine to create consistently formatted output
 */
@@ -242,7 +242,7 @@ func verbose_message(message, format string) {
 }
 
 /*
-Funtion:      warning_message
+Function:     warning_message
 Parameters:   message
 Description:  A routine to display a warning, overriding non verbose mode if needed
 */
@@ -258,7 +258,7 @@ func warning_message(message string) {
 }
 
 /*
-Funtion:      check_command
+Function:     check_command
 Parameters:   command
 Description:  A routine to check that a shell command exists
 */
@@ -278,7 +278,7 @@ func check_command(command string) bool {
 }
 
 /*
-Funtion:      check_linter 
+Function:     check_linter 
 Parameters:   script_file
 Description:  A routine to run linter over script
 */
@@ -298,7 +298,7 @@ func check_linter(script_file string) {
 }
 
 /*
-Funtion:      print_help_category
+Function:     print_help_category
 Parameters:   category
 Description:  A routine to print help information for a specific category
 */
@@ -330,7 +330,7 @@ func print_help_category(category string) {
 }
 
 /*
-Funtion:      print_help
+Function:     print_help
 Parameters:   help_flags
 Description:  A routine to print help information
 */
@@ -352,7 +352,7 @@ func print_help(help_flags string) {
 }
 
 /*
-Funtion:      print_version
+Function:     print_version
 Parameters:   script_file
 Description:  A routine to print version information
 */
@@ -378,7 +378,7 @@ func print_version(script_file string) {
 }
 
 /*
-Funtion:      handle_options 
+Function:     handle_options 
 Parameters:   values
 Description:  A routine to handle otions
               e.g. --verbose sets the verbose option to true
@@ -411,7 +411,7 @@ func handle_options(values string) {
 }
 
 /*
-Funtion:      check_value
+Function:     check_value
 Parameters:   arg_num
 Description:  A routine to handle argument values
 */
@@ -448,7 +448,7 @@ func check_value(arg_num int) {
 }
 
 /*
-Funtion:      print_environment
+Function:     print_environment
 Parameters:   none
 Description:  A routine to print environment variables (options)
 */
@@ -468,7 +468,7 @@ func print_environment() {
 }
 
 /*
-Funtion:      print_defaults
+Function:     print_defaults
 Parameters:   none
 Description:  A routine to print default environment variables (options)
 */
