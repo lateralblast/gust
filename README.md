@@ -241,7 +241,7 @@ Usage (switch):
 option, o:    Set option
 action, a:    Perform action
 version, V:   Print version information
-help, h:    Print help information
+help, h:      Print help information
 
 Usage (option):
 
