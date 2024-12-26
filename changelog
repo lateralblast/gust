@@ -26,3 +26,7 @@
 # Updated documentation
 # 0.1.4: Thu 26 Dec 2024 21:13:03 AEDT
 # Added code for dynamic functions
+# 0.1.5: Thu 26 Dec 2024 21:23:24 AEDT
+# Fixes recommended by linter
+# 0.1.6:
+# Converted more routines to dynamic

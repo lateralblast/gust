@@ -8,7 +8,7 @@ Golang Universal Shell script Template
 Version
 -------
 
-Version 0.1.4
+Version 0.1.6
 
 To get version:
 

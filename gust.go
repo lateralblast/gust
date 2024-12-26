@@ -2,7 +2,7 @@
 
 /*
 Name:         gust (Golang Universal Shell script Template)
-Version:      0.1.4
+Version:      0.1.6
 Release:      1
 License:      CC-BA (Creative Commons By Attribution)
               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -167,7 +167,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
-      dynamic:  false,
+      dynamic:  true,
     },
     "printenv": {
       info:     "Print Environment",
@@ -175,7 +175,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
-      dynamic:  false,
+      dynamic:  true,
     },
     "linter": {
       info:     "Check script with linter",
@@ -183,7 +183,7 @@ var (
       long:     "",
       category: "action",
       value:    "",
-      dynamic:  false,
+      dynamic:  true,
     },
   }
 )
@@ -306,7 +306,7 @@ Parameters:   script_file
 Description:  A routine to run linter over script
 */
 
-func check_linter() {
+func (dynamic Dynamic) Linter() {
   command := "golangci-lint"
   exists  := check_command(command)
   if exists {
@@ -471,12 +471,12 @@ func check_value(arg_num int) {
 }
 
 /*
-Function:     print_environment
+Function:     Printenv
 Parameters:   none
 Description:  A routine to print environment variables (options)
 */
 
-func print_environment() {
+func (dynamic Dynamic) Printenv() {
   fmt.Println("Environment (Options):")
   fmt.Println()
   for key, value := range options {
@@ -491,12 +491,12 @@ func print_environment() {
 }
 
 /*
-Function:     print_defaults
+Function:     Printdefs 
 Parameters:   none
 Description:  A routine to print default environment variables (options)
 */
 
-func print_defaults() {
+func (dynamic Dynamic) Printdefs() {
   fmt.Println("Defaults (Options):")
   fmt.Println()
   for key, value := range defaults {
@@ -540,6 +540,7 @@ func main() {
   regexp2 := regexp.MustCompile("^-")
   regexp3 := regexp.MustCompile("option")
   regexp4 := regexp.MustCompile(",")
+  regexp5 := regexp.MustCompile("^no")
   // loop through command line arguments and handle them
   for arg_num := 1 ; arg_num < len(os.Args) ; arg_num++ {
     arg_name := os.Args[arg_num]
@@ -613,10 +614,10 @@ func main() {
           }
         } else {
           // check if argument is a negative option, e.g. noverbose and handle
-          matches, _ := regexp.MatchString("^no", arg_name)
+          matches := regexp5.MatchString(arg_name)
           if matches {
             parameter  := strings.Split(arg_name, "no")[1]
-            matches, _ := regexp.MatchString("option", arguments[parameter].category)
+            matches   := regexp3.MatchString(arguments[parameter].category)
             if matches {
               handle_options(arg_name)
             } else {
@@ -669,12 +670,6 @@ func main() {
             switch parameter {
               case "help":
                 print_help("all")
-              case "printenv":
-                print_environment()
-              case "printdefs":
-                print_defaults()
-              case "linter":
-                check_linter()
             }
           }
         } else {
