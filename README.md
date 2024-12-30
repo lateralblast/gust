@@ -8,7 +8,7 @@ Golang Universal Shell script Template
 Version
 -------
 
-Version 0.1.6
+Version 0.1.7
 
 To get version:
 
@@ -76,6 +76,7 @@ Requirements
 
 Standard modules required:
 
+- strconv
 - os/exec
 - unicode
 - runtime
@@ -104,12 +105,15 @@ Defaults
 Defaults for options are set in map, e.g.
 
 ```
-defaults = map[string]bool{
-  "verbose": false,
-  "force":   false,
-  "dryrun":  false,
+defaults = map[string]string{
+  "verbose": "false",
+  "force":   "false",
+  "dryrun":  "false",
 }
 ```
+
+The values are stored as strings, as they added via the command line as strings, for easier processing,
+so you'll need to convert then, e.g. string to boolean, if you want to use them in an if statement.
 
 Options
 -------
@@ -146,6 +150,23 @@ dryrun:   false
 verbose:  false
 ```
 
+Environment
+-----------
+
+If you want to find out what values are changed as part of a commandline you can use the printenv action:
+
+```
+./gust.go --action printenv --options dryrun
+Environment (Options):
+
+help:       all     (default = all)
+verbose:    false   (default = false)
+force:      false   (default = false)
+dryrun:     true    (default = false)
+doactions:  true    (default = false)
+dooptions:  true    (default = false)
+```
+
 Arguments
 ---------
 
@@ -153,64 +174,71 @@ Arguments are handled in a map of structs, e.g.
 
 ```
 type Argument struct {
-  info      string
-  short     string
-  long      string
-  category  string
-  value     string
-  dynamic   bool
+  info        string
+  short       string
+  long        string
+  category    string
+  function    func()
 }
+```
 
-arguments = map[string]Argument {
-  "action": {
+They instances of this struct are then initialised in the process_arguments function, e.g.
+
+```
+  arguments["action"] = Argument{
     info:     "Perform action",
     short:    "a",
     long:     "action",
     category: "switch",
-    value:    "",
-    dynamic:  false,
-  },
-  "a": {
+  }
+  arguments["a"] = Argument{
     info:     "Perform action",
     short:    "a",
     long:     "action",
     category: "switch",
-    value:    "",
-    dynamic:  false,
-  },
-  "version": {
+  }
+  arguments["option"] = Argument{
+    info:     "Set option",
+    short:    "o",
+    long:     "option",
+    category: "switch",
+  }
+  arguments["o"] = Argument{
+    info:     "Set option",
+    short:    "o",
+    long:     "option",
+    category: "switch",
+  }
+  arguments["help"] = Argument{
+    info:     "Print help information",
+    short:    "h",
+    long:     "help",
+    category: "action",
+    function: func() {
+      help()
+    },
+  }
+  arguments["h"] = Argument{
+    info:     "Print help information",
+    short:    "h",
+    long:     "help",
+    category: "action",
+  }
+  arguments["version"] = Argument{
     info:     "Print version information",
     short:    "V",
     long:     "version",
     category: "switch",
-    value:    "",
-    dynamic:  true,
-  },
-  "V": {
+    function: func() {
+      version()
+    },
+  }
+  arguments["V"] = Argument{
     info:     "Print version information",
     short:    "V",
     long:     "version",
     category: "switch",
-    value:    "",
-    dynamic:  false,
-  },
-  "printdefs": {
-    info:     "Print Defaults",
-    short:    "printdefs",
-    long:     "",
-    category: "action",
-    value:    "",
-    dynamic:  false,
-  },
-  "printenv": {
-    info:     "Print Environment",
-    short:    "printenv",
-    long:     "",
-    category: "action",
-    value:    "",
-    dynamic:  false,
-  },
-}
+  }
 ```
 
 At the moment, both the short (e.g. -V) and the long version (e.g. --version) must be specified.
@@ -223,46 +251,25 @@ Actions (actions performed by switches) are specified with the category "action"
 
 The info entry specifies the information that is given to the help routine.
 
-The dynamic entry specifies whether a dynamic function/routine is available (one that can be called via its argument name)
+Functions
+---------
 
-Dynamic
--------
-
-Dynamic routines/functions are ones that can be called via their action name, e.g. --version
-
-In the arguments mapped struct, a entry is need that has the dynamic boolean set to true:
+If you want a function to be called as part of handling the argument, you can add that to the struct, e.g:
 
 ```
-arguments = map[string]Argument {
-  "version": {
+  arguments["version"] = Argument{
     info:     "Print version information",
     short:    "V",
     long:     "version",
     category: "switch",
-    value:    "",
-    dynamic:  true,
-  },
-}
+    function: func() {
+      version()
+    },
+  }
 ```
 
-Then a function is required, e.g.:
-
-```
-func (dynamic Dynamic) Version() {
-  // Code here
-}
-
-```
-
-The function is then called as part of the commandline argument processing.
-
-An example of code to call the dynamic routine:
-
-```
-instance := Dynamic{}
-method   := reflect.ValueOf(instance).MethodByName("Verbose")
-method.Call(nil)
-```
+So that additional handling doesn't need to be coded/done, the commandline option values are added
+to a global map (options), and updated as appropriate.
 
 Output
 ------

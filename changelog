@@ -28,5 +28,7 @@
 # Added code for dynamic functions
 # 0.1.5: Thu 26 Dec 2024 21:23:24 AEDT
 # Fixes recommended by linter
-# 0.1.6:
+# 0.1.6: Thu 28 Dec 2024 20:20:24 AEDT
 # Converted more routines to dynamic
+# 0.1.7: Mon 30 Dec 2024 11:12:44 AEDT
+# Moved from dynamic functions to functions in structs

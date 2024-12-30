@@ -2,7 +2,7 @@
 
 /*
 Name:         gust (Golang Universal Shell script Template)
-Version:      0.1.6
+Version:      0.1.7
 Release:      1
 License:      CC-BA (Creative Commons By Attribution)
               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -20,10 +20,10 @@ package main
 // Import modules
 
 import (
+  "strconv"
   "os/exec"
   "unicode"
   "runtime"
-  "reflect"
   "strings"
   "regexp"
   "bufio"
@@ -34,158 +34,31 @@ import (
 // Create a structure to manage commandline arguments/switches
 
 type Argument struct {
-  info      string
-  short     string
-  long      string
-  category  string
-  value     string
-  dynamic   bool
+  info        string
+  short       string
+  long        string
+  category    string
+  function    func()
 }
-
-// Dynamic function struct
-
-type Dynamic struct{}
 
 // Initialize variables
 
 var (
-  // Get script file
-  _, script_file, _,  _ = runtime.Caller(0)
-  // Create booleans for actions and options switches
-  do_actions = false
-  do_options = false
-  // Create a map to store default booleans for options
+  // Create a map to store default values for options
   // This should contain a default value for each option created
-  defaults = map[string]bool{
-    "verbose": false,
-    "force":   false,
-    "dryrun":  false,
+  defaults = map[string]string{
+    "verbose":    "false",
+    "force":      "false",
+    "dryrun":     "false",
+    "doactions":  "false",
+    "dooptions":  "false",
+    "help":       "all",
   }
-  options = map[string]bool{}
+  // Create options map
+  options = map[string]string{}
   // Create a map of Argument structs to store commanline argument information
-  // This should include both the short forms (e.g. -V) and long version (e.g. --version) 
-  arguments = map[string]Argument {
-    "action": {
-      info:     "Perform action",
-      short:    "a",
-      long:     "action",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "a": {
-      info:     "Perform action",
-      short:    "a",
-      long:     "action",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "option": {
-      info:     "Set option",
-      short:    "o",
-      long:     "option",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "o": {
-      info:     "Set option",
-      short:    "o",
-      long:     "option",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "dryrun": {
-      info:     "Enable dryrun mode",
-      short:    "d",
-      long:     "dryrun",
-      category: "option",
-      value:    "false",
-      dynamic:  false,
-    },
-    "d": {
-      info:     "Enable dryrun mode",
-      short:    "d",
-      long:     "dryrun",
-      category: "option",
-      value:    "false",
-      dynamic:  false,
-    },
-    "help": {
-      info:     "Print help information",
-      short:    "h",
-      long:     "help",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "h": {
-      info:     "Print help information",
-      short:    "h",
-      long:     "help",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "verbose": {
-      info:     "Enable verbose output",
-      short:    "v",
-      long:     "verbose",
-      category: "option",
-      value:    "false",
-      dynamic:  false,
-    },
-    "v": {
-      info:     "Enable verbose output",
-      short:    "v",
-      long:     "verbose",
-      category: "option",
-      value:    "false",
-      dynamic:  false,
-    },
-    "version": {
-      info:     "Print version information",
-      short:    "V",
-      long:     "version",
-      category: "switch",
-      value:    "",
-      dynamic:  true,
-    },
-    "V": {
-      info:     "Print version information",
-      short:    "V",
-      long:     "version",
-      category: "switch",
-      value:    "",
-      dynamic:  false,
-    },
-    "printdefs": {
-      info:     "Print Defaults",
-      short:    "printdefs",
-      long:     "",
-      category: "action",
-      value:    "",
-      dynamic:  true,
-    },
-    "printenv": {
-      info:     "Print Environment",
-      short:    "printenv",
-      long:     "",
-      category: "action",
-      value:    "",
-      dynamic:  true,
-    },
-    "linter": {
-      info:     "Check script with linter",
-      short:    "linter",
-      long:     "",
-      category: "action",
-      value:    "",
-      dynamic:  true,
-    },
-  }
+  // This gets populated in the populate_arguments function
+  arguments = map[string]Argument{}
 )
 
 
@@ -227,7 +100,8 @@ func verbose_message(message, format string) {
   if matches {
     fmt.Println(message) 
   } else {
-    if (options["verbose"]) {
+    matches, _ = strconv.ParseBool(options["verbose"])
+    if matches {
       matches, _ := regexp.MatchString("ing$", format)
       if matches {
         header = format
@@ -271,12 +145,13 @@ Description:  A routine to display a warning, overriding non verbose mode if nee
 */
 
 func warning_message(message string) {
-  if (options["verbose"]) {
+  matches, _ := strconv.ParseBool(options["verbose"])
+  if matches {
     verbose_message(message, "warn")
   } else {
-    options["verbose"] = true
+    options["verbose"] = "true"
     verbose_message(message, "warn")
-    options["verbose"] = false
+    options["verbose"] = "false"
   }
 }
 
@@ -301,16 +176,17 @@ func check_command(command string) bool {
 }
 
 /*
-Function:     check_linter 
+Function:     linter 
 Parameters:   script_file
 Description:  A routine to run linter over script
 */
 
-func (dynamic Dynamic) Linter() {
+func linter() {
   command := "golangci-lint"
   exists  := check_command(command)
   if exists {
     fmt.Println("Linter output:")
+    script_file := options["script"]
     shell := exec.Command(command, "run", script_file)
     stdout, _ := shell.Output()
     output := string(stdout)
@@ -318,6 +194,7 @@ func (dynamic Dynamic) Linter() {
   } else {
     warning_message("No linter found")
   }
+  os.Exit(0)
 }
 
 /*
@@ -354,12 +231,12 @@ func print_help_category(category string) {
 
 /*
 Function:     print_help
-Parameters:   help_flags
+Parameters:   options
 Description:  A routine to print help information
 */
 
-func print_help(help_flags string) {
-  switch help_flags {
+func help() {
+  switch options["help"] {
     case "option", "options":
       print_help_category("option")
     case "switch", "switches":
@@ -375,12 +252,13 @@ func print_help(help_flags string) {
 }
 
 /*
-Function:     Version (dynamic)
-Parameters:   script_file
+Function:     version
+Parameters:   options 
 Description:  A routine to print version information
 */
 
-func (dynamic Dynamic) Version() {
+func version() {
+  script_file := options["script"]
   open_file, file_error := os.Open(script_file)
   if file_error != nil {
       fmt.Println(file_error)
@@ -424,10 +302,10 @@ func handle_options(values string) {
     if matches {
       format    = "disable"
       parameter = strings.Split(parameter, "no")[1]
-      options[parameter] = false
+      options[parameter] = "false"
     } else {
       format = "enable"
-      options[parameter] = true
+      options[parameter] = "true"
     }
     verbose_message(parameter, format)
   }
@@ -445,10 +323,12 @@ func check_value(arg_num int) {
     message := "No value given for " + parameter
     switch parameter {
       case "--help", "-h":
-        print_help("all")
+        options["help"] = "all"
+        help()
       default:
         verbose_message(message, "warn")
-        print_help("all")
+        options["help"] = "all"
+        help()
     }
     os.Exit(1)
   }
@@ -456,7 +336,7 @@ func check_value(arg_num int) {
   matches, _ := regexp.MatchString("^-", check_value)
   if matches {
     message := "No value given for " + parameter
-    options["verbose"] = true
+    options["verbose"] = "true"
     verbose_message(message, "warn")
     os.Exit(1)
   } else {
@@ -465,54 +345,194 @@ func check_value(arg_num int) {
     matches, _ := regexp.MatchString("help|h", parameter)
     if matches {
       value := os.Args[arg_num+1]
-      print_help(value)
+      options["help"] = value
+      help()
     }
   }
 }
 
 /*
-Function:     Printenv
+Function:     printenv
 Parameters:   none
 Description:  A routine to print environment variables (options)
 */
 
-func (dynamic Dynamic) Printenv() {
+func printenv() {
   fmt.Println("Environment (Options):")
   fmt.Println()
+  regexp := regexp.MustCompile("script")
   for key, value := range options {
-    def := defaults[key]
-    if len(key) < 7 {
-      fmt.Printf("%s:\t\t%t\t(default = %t)\n", key, value, def)
-    } else {
-      fmt.Printf("%s:\t%t\t(default = %t)\n", key, value, def)
+    matches := regexp.MatchString(key)
+    if (!matches) {
+      def := defaults[key]
+      if len(key) < 7 {
+        fmt.Printf("%s:\t\t%s\t(default = %s)\n", key, value, def)
+      } else {
+        fmt.Printf("%s:\t%s\t(default = %s)\n", key, value, def)
+      }
     }
   }
   fmt.Println()
 }
 
 /*
-Function:     Printdefs 
+Function:     printdefs 
 Parameters:   none
 Description:  A routine to print default environment variables (options)
 */
 
-func (dynamic Dynamic) Printdefs() {
+func printdefs() {
   fmt.Println("Defaults (Options):")
   fmt.Println()
   for key, value := range defaults {
     if len(key) < 7 {
-      fmt.Printf("%s:\t\t%t\n", key, value)
+      fmt.Printf("%s:\t\t%s\n", key, value)
     } else {
-      fmt.Printf("%s:\t%t\n", key, value)
+      fmt.Printf("%s:\t%s\n", key, value)
     }
   }
   fmt.Println()
 }
 
+func populate_arguments() {
+  arguments["action"] = Argument{
+    info:     "Perform action",
+    short:    "a",
+    long:     "action",
+    category: "switch",
+  }
+  arguments["a"] = Argument{
+    info:     "Perform action",
+    short:    "a",
+    long:     "action",
+    category: "switch",
+  }
+  arguments["option"] = Argument{
+    info:     "Set option",
+    short:    "o",
+    long:     "option",
+    category: "switch",
+  }
+  arguments["o"] = Argument{
+    info:     "Set option",
+    short:    "o",
+    long:     "option",
+    category: "switch",
+  }
+  arguments["dryrun"] = Argument{
+    info:     "Enable dryrun mode",
+    short:    "d",
+    long:     "dryrun",
+    category: "option",
+  }
+  arguments["d"] = Argument{
+    info:     "Enable dryrun mode",
+    short:    "d",
+    long:     "dryrun",
+    category: "option",
+  }
+  arguments["d"] = Argument{
+    info:     "Print help information",
+    short:    "h",
+    long:     "help",
+    category: "switch",
+  }
+  arguments["verbose"] = Argument{
+    info:     "Enable verbose output",
+    short:    "v",
+    long:     "verbose",
+    category: "option",
+  }
+  arguments["v"] = Argument{
+    info:     "Enable verbose output",
+    short:    "v",
+    long:     "verbose",
+    category: "option",
+  }
+  arguments["help"] = Argument{
+    info:     "Print help information",
+    short:    "h",
+    long:     "help",
+    category: "action",
+    function: func() {
+      help()
+    },
+  }
+  arguments["h"] = Argument{
+    info:     "Print help information",
+    short:    "h",
+    long:     "help",
+    category: "action",
+  }
+  arguments["linter"] = Argument{
+    info:     "Check script with linter",
+    short:    "l",
+    long:     "linter",
+    category: "action",
+    function: func() {
+      linter()
+    },
+  }
+  arguments["l"] = Argument{
+    info:     "Check script with linter",
+    short:    "linter",
+    long:     "",
+    category: "action",
+  }
+  arguments["printdefs"] = Argument{
+    info:     "Print Defaults",
+    short:    "d",
+    long:     "printdefs",
+    category: "action",
+    function: func() {
+      printdefs()
+    },
+  }
+  arguments["D"] = Argument{
+    info:     "Print Defaults",
+    short:    "printdefs",
+    long:     "",
+    category: "action",
+  }
+  arguments["printenv"] = Argument{
+    info:     "Print Environment",
+    short:    "e",
+    long:     "printenv",
+    category: "action",
+    function: func() {
+      printenv()
+    },
+  }
+  arguments["E"] = Argument{
+    info:     "Print Environment",
+    short:    "printenv",
+    long:     "",
+    category: "action",
+  }
+  arguments["version"] = Argument{
+    info:     "Print version information",
+    short:    "V",
+    long:     "version",
+    category: "switch",
+    function: func() {
+      version()
+    },
+  }
+  arguments["V"] = Argument{
+    info:     "Print version information",
+    short:    "V",
+    long:     "version",
+    category: "switch",
+  }
+}
 
 // Main function
 
 func main() {
+  // Get script file
+  _, script_file, _, _ := runtime.Caller(0)
+  options["script"] = script_file
+  populate_arguments()
   // Copy defaults to options map
   for key, value := range defaults {
     options[key] = value
@@ -524,23 +544,25 @@ func main() {
   cli_args := strings.Join([]string(os.Args), " ")
   matches, _ := regexp.MatchString("noverbose", cli_args)
   if matches {
-    options["verbose"] = false
+    options["verbose"] = "false"
   } else {
     matches, _ := regexp.MatchString("verbose", cli_args)
     if matches {
-      options["verbose"] = true
+      options["verbose"] = "true"
     }
   }
   // If we have no arguments print help information
   if len(os.Args) < 2 {
-    help_flags := "all"
-    print_help(help_flags)
+    options["help"] = "all"
+    help()
   }
-  regexp1 := regexp.MustCompile("^-[a-z,A-Z][a-z,Z]")
+  regexp1 := regexp.MustCompile("^-[a-z,A-Z][a-z,A-Z]")
   regexp2 := regexp.MustCompile("^-")
   regexp3 := regexp.MustCompile("option")
   regexp4 := regexp.MustCompile(",")
   regexp5 := regexp.MustCompile("^no")
+  regexp6 := regexp.MustCompile("action|switch")
+//  regexp6 := regexp.MustCompile("action")
   // loop through command line arguments and handle them
   for arg_num := 1 ; arg_num < len(os.Args) ; arg_num++ {
     arg_name := os.Args[arg_num]
@@ -558,17 +580,21 @@ func main() {
         letter := letters[num] 
         _, exists := arguments[letter]
         if (exists) {
+          long_name := arguments[letter].long
           // Check that an argument structure exists and grab the long version
           matches := regexp3.MatchString(arguments[letter].category)
           if matches {
-            long_name := arguments[letter].long
             handle_options(long_name)
+          } else {
+            arguments[long_name].function()
           }
         } else {
+          fmt.Println(arg_name)
           // Print help if there is no argument structure
           message := "Commandline argument "+letter+" does not exist"
           warning_message(message)
-          print_help("all")
+          options["help"] = "all"
+          help()
         }
       }
     } else {
@@ -585,30 +611,28 @@ func main() {
           if matches {
             handle_options(long_name)
           } else {
-            dynamic := capitalize(long_name)
             _, exists := arguments[long_name]
             if exists {
-              check := arguments[long_name].dynamic
-              if check {
-                instance := Dynamic{}
-                method   := reflect.ValueOf(instance).MethodByName(dynamic)
-                method.Call(nil)
-              } else {
-                // If argument is not an option, handle appropriatly
-                switch long_name {
-                  case "action":
-                    check_value(arg_num)
-                    action_flags = append(action_flags, os.Args[arg_num+1])
-                    do_actions = true
-                  case "option":
-                    check_value(arg_num)
-                    option_flags = append(option_flags, os.Args[arg_num+1])
-                    do_options = true
-                  case "help":
-                    check_value(arg_num)
-                  default:
-                    print_help("all")
-                }
+              // If argument is not an option, handle appropriatly
+              switch long_name {
+                case "action":
+                  check_value(arg_num)
+                  action_flags = append(action_flags, os.Args[arg_num+1])
+                  options["doactions"] = "true"
+                case "option":
+                  check_value(arg_num)
+                  option_flags = append(option_flags, os.Args[arg_num+1])
+                  options["dooptions"] = "true"
+                case "help":
+                  check_value(arg_num)
+                default:
+                  matches := regexp6.MatchString(arguments[long_name].category)
+                  if matches {
+                    arguments[long_name].function()
+                  }else {
+                    options["help"] = "all"
+                    help()
+                  }
               }
             }
           }
@@ -624,19 +648,28 @@ func main() {
               // If argument structure does exist warn and print help
               message := "Commandline argument "+arg_name+" does not exist"
               warning_message(message)
-              print_help("all")
+              options["help"] = "all"
+              help()
             }
           } else {
-            // If argument structure does exist warn and print help
-            message := "Commandline argument "+arg_name+" does not exist"
-            warning_message(message)
-            print_help("all")
+            long_name := arguments[arg_name].long
+            matches   := regexp6.MatchString(arguments[long_name].category)
+            if matches {
+              arguments[long_name].function()
+            } else {
+              // If argument structure does exist warn and print help
+              message := "Commandline argument "+arg_name+" does not exist"
+              warning_message(message)
+              options["help"] = "all"
+              help()
+            }
           }
         }
       }
     }
   } 
   // If we have option(s) handle each
+  do_options, _ := strconv.ParseBool(options["dooptions"])
   if do_options {
     for number := 0 ; number < len(option_flags) ; number++ {
       values := option_flags[number]
@@ -644,6 +677,7 @@ func main() {
     }
   }
   // If we have action(s) handle each
+  do_actions, _ := strconv.ParseBool(options["doactions"])
   if do_actions {
     for number := 0 ; number < len(action_flags) ; number++ {
       action_list := []string{}
@@ -658,22 +692,18 @@ func main() {
         parameter := action_list[act_num]
         message   := "action flag " +parameter
         verbose_message(message, "process")
-        dynamic := capitalize(parameter)
         _, exists := arguments[parameter]
         if exists {
-          check := arguments[parameter].dynamic
-          if check {
-            instance := Dynamic{}
-            method   := reflect.ValueOf(instance).MethodByName(dynamic)
-            method.Call(nil)
+          matches := regexp6.MatchString(arguments[parameter].category)
+          if (matches) {
+            arguments[parameter].function()
           } else {
-            switch parameter {
-              case "help":
-                print_help("all")
-            }
+            options["help"] = "all"
+            help()
           }
         } else {
-          print_help("all")
+          options["help"] = "all"
+          help()
         }
       }
     }
