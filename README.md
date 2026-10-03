@@ -8,7 +8,7 @@ Golang Universal Shell script Template
 Version
 -------
 
-Version 0.1.7
+Version 0.3.6
 
 To get version:
 
@@ -19,7 +19,7 @@ To get version:
 License
 -------
 
-CC BY-SA: https://creativecommons.org/licenses/by-sa/4.0/
+CC BY-NC-SA: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 Fund me here: https://ko-fi.com/richardatlateralblast
 
@@ -83,15 +83,14 @@ Requirements
 
 Standard modules required:
 
-- strconv
-- os/exec
-- unicode
-- runtime
-- strings
-- regexp
-- bufio
 - fmt
 - os
+- os/exec
+- runtime
+- sort
+- strconv
+- strings
+- unicode
 
 Workflow
 --------
@@ -181,74 +180,23 @@ Arguments are handled in a map of structs, e.g.
 
 ```
 type Argument struct {
-  info        string
-  short       string
-  long        string
-  category    string
-  function    func()
+  info     string
+  short    string
+  long     string
+  category string
+  function func()
 }
 ```
 
-They instances of this struct are then initialised in the process_arguments function, e.g.
+The instances of this struct are created by the addArgument function, which registers each
+argument under both its long and short name. They are set up in the populateArguments function, e.g.
 
 ```
-  arguments["action"] = Argument{
-    info:     "Perform action",
-    short:    "a",
-    long:     "action",
-    category: "switch",
-  }
-  arguments["a"] = Argument{
-    info:     "Perform action",
-    short:    "a",
-    long:     "action",
-    category: "switch",
-  }
-  arguments["option"] = Argument{
-    info:     "Set option",
-    short:    "o",
-    long:     "option",
-    category: "switch",
-  }
-  arguments["o"] = Argument{
-    info:     "Set option",
-    short:    "o",
-    long:     "option",
-    category: "switch",
-  }
-  arguments["help"] = Argument{
-    info:     "Print help information",
-    short:    "h",
-    long:     "help",
-    category: "action",
-    function: func() {
-      help()
-    },
-  }
-  arguments["h"] = Argument{
-    info:     "Print help information",
-    short:    "h",
-    long:     "help",
-    category: "action",
-  }
-  arguments["version"] = Argument{
-    info:     "Print version information",
-    short:    "V",
-    long:     "version",
-    category: "switch",
-    function: func() {
-      version()
-    },
-  }
-  arguments["V"] = Argument{
-    info:     "Print version information",
-    short:    "V",
-    long:     "version",
-    category: "switch",
-  }
+  addArgument("Perform action", "a", "action", "switch", nil)
+  addArgument("Print version information", "V", "version", "switch", version)
 ```
 
-At the moment, both the short (e.g. -V) and the long version (e.g. --version) must be specified.
+The parameters are info, short name, long name, category and function.
 
 Switches (arguments that take values/parameters) are specified with the category "switch"
 
@@ -261,19 +209,14 @@ The info entry specifies the information that is given to the help routine.
 Functions
 ---------
 
-If you want a function to be called as part of handling the argument, you can add that to the struct, e.g:
+If you want a function to be called as part of handling the argument, pass it as the last parameter, e.g:
 
 ```
-  arguments["version"] = Argument{
-    info:     "Print version information",
-    short:    "V",
-    long:     "version",
-    category: "switch",
-    function: func() {
-      version()
-    },
-  }
+  addArgument("Print version information", "V", "version", "switch", version)
 ```
+
+Arguments without a function (e.g. action and option, which take values) are handled in parseArguments.
+Running an argument that has no function is a usage error.
 
 So that additional handling doesn't need to be coded/done, the commandline option values are added
 to a global map (options), and updated as appropriate.
@@ -281,14 +224,14 @@ to a global map (options), and updated as appropriate.
 Output
 ------
 
-In general output is run through the verbose_message function, which handles formatting and outputs appropriate
+In general output is run through the verboseMessage function, which handles formatting and outputs appropriate
 prefixes, e.g. "Notice", "Warning", etc. This is designed to make sure out is consistently formatted.
 It also allows output to be done only when the verbose mode is set so the script runs quietly if needed.
 
 Check Values
 ------------
 
-There is a check_values function that can be run with switches that take values.
+There is a checkValue function that can be run with switches that take values.
 This is a simple check to see if the value, if it starts with a "--" then it assumes that you haven't provided
 a value and it's processing the next switch and exit. This can be overridden by using the --force switch.
 
@@ -304,7 +247,6 @@ Usage (switch):
 option, o:    Set option
 action, a:    Perform action
 version, V:   Print version information
-help, h:      Print help information
 
 Usage (option):
 
@@ -313,9 +255,10 @@ dryrun, d:    Enable dryrun mode
 
 Usage (action):
 
-printdefs:    Print Defaults
-linter:       Check script with linter
-printenv:     Print Environment
+help, h:      Print help information
+linter, l:    Check script with linter
+printdefs, D: Print Defaults
+printenv, E:  Print Environment
 ```
 Linter
 ------
